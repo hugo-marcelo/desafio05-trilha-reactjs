@@ -30,9 +30,13 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+  preview: boolean;
 }
 
-export default function Home({ postsPagination }: HomeProps) {
+export default function Home({
+  postsPagination,
+  preview,
+}: HomeProps): JSX.Element {
   const [posts, setPosts] = useState(postsPagination);
 
   function handlePagination(next_page: string) {
@@ -67,12 +71,14 @@ export default function Home({ postsPagination }: HomeProps) {
             </a>
           </Link>
           <div className={commonStyles.postDescription}>
-            <time>
-              <FiCalendar />
-              {format(new Date(post.first_publication_date), 'dd MMM yyyy', {
-                locale: ptBr,
-              })}
-            </time>
+            {!preview && (
+              <time>
+                <FiCalendar />
+                {format(new Date(post.first_publication_date), 'dd MMM yyyy', {
+                  locale: ptBr,
+                })}
+              </time>
+            )}
             <span>
               <FiUser />
               {post.data.author}
@@ -89,17 +95,27 @@ export default function Home({ postsPagination }: HomeProps) {
           Carregar mais posts
         </button>
       )}
+
+      {preview && (
+        <Link href="/api/exit-preview">
+          <a className={commonStyles.previewButton}>Sair do modo Preview</a>
+        </Link>
+      )}
     </div>
   );
 }
 
-export const getStaticProps: GetStaticProps = async () => {
+export const getStaticProps: GetStaticProps = async ({
+  preview = false,
+  previewData,
+}) => {
   const prismic = getPrismicClient();
   const postsResponse = await prismic.query(
     [Prismic.predicates.at('document.type', 'posts')],
     {
       fetch: ['posts.title', 'posts.subtitle', 'posts.author'],
       pageSize: 1,
+      ref: previewData?.ref ?? null,
     }
   );
 
@@ -123,6 +139,7 @@ export const getStaticProps: GetStaticProps = async () => {
   return {
     props: {
       postsPagination,
+      preview,
     },
     revalidate: 60 * 60 * 24, // 24 hrs
   };
